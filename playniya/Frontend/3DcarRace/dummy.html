@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Racing Game - Frontend Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            overflow: hidden;
+            color: white;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            perspective: 1000px;
+        }
+
+        #track {
+            position: absolute;
+            width: 800px;
+            height: 1200px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) rotateX(60deg);
+            background: 
+                linear-gradient(90deg, #333 0%, #555 50%, #333 100%),
+                repeating-linear-gradient(
+                    0deg,
+                    transparent 0px,
+                    transparent 48px,
+                    #fff 48px,
+                    #fff 52px
+                );
+            border: 8px solid #ff6b35;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
+        .car {
+            position: absolute;
+            width: 40px;
+            height: 80px;
+            background: linear-gradient(45deg, #ff4757, #ff3742);
+            border-radius: 15px 15px 5px 5px;
+            border: 2px solid #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: transform 0.1s ease;
+            cursor: pointer;
+        }
+
+        .car::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 20px;
+            background: #333;
+            border-radius: 50%;
+            border: 2px solid #fff;
+        }
+
+        .car::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+        }
+
+        .player-car {
+            background: linear-gradient(45deg, #3742ff, #4757ff);
+            border: 3px solid #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+
+        .nitro-pickup {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(45deg, #00ff88, #00cc6a);
+            border-radius: 50%;
+            border: 2px solid #fff;
+            animation: pulse 1s infinite;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.7);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        .nitro-active {
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.8);
+            animation: nitroBoost 0.3s infinite;
+        }
+
+        @keyframes nitroBoost {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #ff6b35;
+            pointer-events: all;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #ff6b35;
+            pointer-events: all;
+        }
+
+        #leaderboard {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #ff6b35;
+            min-width: 200px;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #ff6b35, #ff8c42);
+            border: none;
+            color: white;
+            padding: 15px 20px;
+            margin: 5px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+
+        .control-btn:hover {
+            background: linear-gradient(45deg, #ff8c42, #ff6b35);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .control-btn.active {
+            background: linear-gradient(45deg, #00ff88, #00cc6a);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        }
+
+        .nitro-btn {
+            background: linear-gradient(45deg, #00ff88, #00cc6a);
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            font-size: 14px;
+            margin: 10px;
+        }
+
+        .nitro-btn:hover {
+            background: linear-gradient(45deg, #00cc6a, #00ff88);
+        }
+
+        .nitro-btn.active {
+            background: linear-gradient(45deg, #ff4757, #ff3742);
+            animation: nitroButton 0.3s infinite;
+        }
+
+        @keyframes nitroButton {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .speed-bar {
+            width: 200px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .speed-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #ff6b35, #ff4757);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .nitro-bar {
+            width: 150px;
+            height: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+
+        .nitro-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #00cc6a);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .player-info {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            border-left: 4px solid #ff6b35;
+        }
+
+        .rank-1 { border-left-color: #ffd700; }
+        .rank-2 { border-left-color: #c0c0c0; }
+        .rank-3 { border-left-color: #cd7f32; }
+
+        #gameStatus {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #ff6b35;
+            text-align: center;
+            font-size: 24px;
+            display: none;
+        }
+
+        .timer {
+            font-size: 28px;
+            font-weight: bold;
+            color: #ff6b35;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .respawn-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 0, 0, 0.3);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            font-size: 48px;
+            font-weight: bold;
+            animation: respawnFlash 0.5s infinite;
+        }
+
+        @keyframes respawnFlash {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.7; }
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #ff6b35;
+            max-width: 300px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="track">
+            <!-- Cars will be dynamically added here -->
+        </div>
+        
+        <div id="ui">
+            <div id="hud">
+                <div class="timer">Time: <span id="timeRemaining">120</span>s</div>
+                <div>Speed: <span id="speed">0</span> km/h</div>
+                <div class="speed-bar">
+                    <div class="speed-fill" id="speedFill"></div>
+                </div>
+                <div>Nitro: <span id="nitroAmount">100</span>%</div>
+                <div class="nitro-bar">
+                    <div class="nitro-fill" id="nitroFill"></div>
+                </div>
+                <div>Distance: <span id="distance">0</span>m</div>
+                <div>Lap: <span id="currentLap">1</span>/3</div>
+                <div>Rank: <span id="rank">1</span></div>
+            </div>
+
+            <div id="leaderboard">
+                <h3>🏆 Leaderboard</h3>
+                <div id="playerList"></div>
+            </div>
+
+            <div id="controls">
+                <div>
+                    <button class="control-btn" id="leftBtn">← Left</button>
+                    <button class="control-btn" id="rightBtn">Right →</button>
+                </div>
+                <div>
+                    <button class="control-btn" id="accelerateBtn">🚀 Accelerate</button>
+                </div>
+                <div>
+                    <button class="control-btn nitro-btn" id="nitroBtn">💨<br>NITRO</button>
+                </div>
+            </div>
+
+            <div class="instructions">
+                <h4>🎮 Controls:</h4>
+                <p>← → : Steer Left/Right</p>
+                <p>🚀 : Accelerate</p>
+                <p>💨 : Nitro Boost</p>
+                <br>
+                <p><strong>Goal:</strong> Complete 3 laps or cover the most distance in 2 minutes!</p>
+            </div>
+        </div>
+
+        <div id="gameStatus">
+            <div id="statusMessage">Waiting for players...</div>
+            <button class="control-btn" id="startBtn" onclick="startGame()">Start Demo</button>
+        </div>
+
+        <div class="respawn-overlay" id="respawnOverlay">
+            <div>RESPAWNING...</div>
+        </div>
+    </div>
+
+    <script>
+        class RacingGameDemo {
+            constructor() {
+                this.gameState = {
+                    players: new Map(),
+                    gameStarted: false,
+                    timeRemaining: 120,
+                    gameEnded: false,
+                    trackLength: 1000
+                };
+                
+                this.playerCar = {
+                    id: 'player1',
+                    x: 0,
+                    z: 100,
+                    rotation: 0,
+                    speed: 0,
+                    maxSpeed: 100,
+                    nitroAmount: 100,
+                    nitroActive: false,
+                    distanceCovered: 0,
+                    currentLap: 1,
+                    rank: 1,
+                    isRespawning: false,
+                    respawnTime: 0
+                };
+                
+                this.aiCars = [];
+                this.nitroPickups = [];
+                this.inputState = {
+                    left: false,
+                    right: false,
+                    accelerate: false,
+                    nitro: false
+                };
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupEventListeners();
+                this.createAICars();
+                this.createNitroPickups();
+                this.render();
+                this.showGameStatus();
+            }
+            
+            setupEventListeners() {
+                // Button controls
+                const leftBtn = document.getElementById('leftBtn');
+                const rightBtn = document.getElementById('rightBtn');
+                const accelerateBtn = document.getElementById('accelerateBtn');
+                const nitroBtn = document.getElementById('nitroBtn');
+                
+                // Mouse/touch events for buttons
+                this.setupButtonEvents(leftBtn, 'left');
+                this.setupButtonEvents(rightBtn, 'right');
+                this.setupButtonEvents(accelerateBtn, 'accelerate');
+                this.setupButtonEvents(nitroBtn, 'nitro');
+                
+                // Keyboard controls
+                document.addEventListener('keydown', (e) => {
+                    switch(e.key) {
+                        case 'ArrowLeft':
+                        case 'a':
+                        case 'A':
+                            this.inputState.left = true;
+                            leftBtn.classList.add('active');
+                            break;
+                        case 'ArrowRight':
+                        case 'd':
+                        case 'D':
+                            this.inputState.right = true;
+                            rightBtn.classList.add('active');
+                            break;
+                        case 'ArrowUp':
+                        case 'w':
+                        case 'W':
+                        case ' ':
+                            this.inputState.accelerate = true;
+                            accelerateBtn.classList.add('active');
+                            e.preventDefault();
+                            break;
+                        case 'Shift':
+                        case 'n':
+                        case 'N':
+                            this.inputState.nitro = true;
+                            nitroBtn.classList.add('active');
+                            break;
+                    }
+                });
+                
+                document.addEventListener('keyup', (e) => {
+                    switch(e.key) {
+                        case 'ArrowLeft':
+                        case 'a':
+                        case 'A':
+                            this.inputState.left = false;
+                            leftBtn.classList.remove('active');
+                            break;
+                        case 'ArrowRight':
+                        case 'd':
+                        case 'D':
+                            this.inputState.right = false;
+                            rightBtn.classList.remove('active');
+                            break;
+                        case 'ArrowUp':
+                        case 'w':
+                        case 'W':
+                        case ' ':
+                            this.inputState.accelerate = false;
+                            accelerateBtn.classList.remove('active');
+                            break;
+                        case 'Shift':
+                        case 'n':
+                        case 'N':
+                            this.inputState.nitro = false;
+                            nitroBtn.classList.remove('active');
+                            break;
+                    }
+                });
+            }
+            
+            setupButtonEvents(button, action) {
+                button.addEventListener('mousedown', () => {
+                    this.inputState[action] = true;
+                    button.classList.add('active');
+                });
+                
+                button.addEventListener('mouseup', () => {
+                    this.inputState[action] = false;
+                    button.classList.remove('active');
+                });
+                
+                button.addEventListener('mouseleave', () => {
+                    this.inputState[action] = false;
+                    button.classList.remove('active');
+                });
+                
+                button.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.inputState[action] = true;
+                    button.classList.add('active');
+                });
+                
+                button.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    this.inputState[action] = false;
+                    button.classList.remove('active');
+                });
+            }
+            
+            createAICars() {
+                const colors = ['#ff4757', '#2ed573', '#ffa502', '#3742fa', '#ff6348'];
+                const startPositions = [
+                    { x: -60, z: 50 },
+                    { x: 60, z: 80 },
+                    { x: -30, z: 120 },
+                    { x: 30, z: 140 }
+                ];
+                
+                for (let i = 0; i < 4; i++) {
+                    const car = {
+                        id: `ai${i + 1}`,
+                        x: startPositions[i].x,
+                        z: startPositions[i].z,
+                        rotation: 0,
+                        speed: 0,
+                        maxSpeed: 80 + Math.random() * 20,
+                        distanceCovered: 0,
+                        currentLap: 1,
+                        rank: i + 2,
+                        color: colors[i],
+                        aiSpeed: 0.5 + Math.random() * 0.5
+                    };
+                    this.aiCars.push(car);
+                }
+            }
+            
+            createNitroPickups() {
+                const positions = [
+                    { x: -100, z: 300 },
+                    { x: 100, z: 300 },
+                    { x: -80, z: 500 },
+                    { x: 80, z: 500 },
+                    { x: -60, z: 700 },
+                    { x: 60, z: 700 }
+                ];
+                
+                positions.forEach((pos, index) => {
+                    this.nitroPickups.push({
+                        id: `nitro${index}`,
+                        x: pos.x,
+                        z: pos.z,
+                        active: true
+                    });
+                });
+            }
+            
+            startGame() {
+                this.gameState.gameStarted = true;
+                this.gameState.gameEnded = false;
+                this.gameState.timeRemaining = 120;
+                document.getElementById('gameStatus').style.display = 'none';
+                
+                // Start game loop
+                this.gameLoop = setInterval(() => {
+                    this.updateGame();
+                }, 1000 / 60); // 60 FPS
+                
+                // Start timer
+                this.timerLoop = setInterval(() => {
+                    this.gameState.timeRemaining--;
+                    this.updateUI();
+                    
+                    if (this.gameState.timeRemaining <= 0) {
+                        this.endGame();
+                    }
+                }, 1000);
+            }
+            
+            updateGame() {
+                if (!this.gameState.gameStarted || this.gameState.gameEnded) return;
+                
+                // Update player car
+                this.updatePlayerCar();
+                
+                // Update AI cars
+                this.updateAICars();
+                
+                // Check collisions
+                this.checkCollisions();
+                
+                // Update rankings
+                this.updateRankings();
+                
+                // Update rendering
+                this.render();
+                this.updateUI();
+            }
+            
+            updatePlayerCar() {
+                const car = this.playerCar;
+                
+                if (car.isRespawning) {
+                    car.respawnTime -= 1/60;
+                    if (car.respawnTime <= 0) {
+                        car.isRespawning = false;
+                        document.getElementById('respawnOverlay').style.display = 'none';
+                    }
+                    return;
+                }
+                
+                // Handle input
+                if (this.inputState.left) car.rotation -= 0.05;
+                if (this.inputState.right) car.rotation += 0.05;
+                
+                // Handle acceleration
+                if (this.inputState.accelerate) {
+                    car.speed = Math.min(car.speed + 2, car.maxSpeed);
+                } else {
+                    car.speed = Math.max(car.speed - 1, 0);
+                }
+                
+                // Handle nitro
+                if (this.inputState.nitro && car.nitroAmount > 0) {
+                    car.nitroActive = true;
+                    car.speed = Math.min(car.speed + 3, car.maxSpeed * 1.5);
+                    car.nitroAmount = Math.max(0, car.nitroAmount - 1);
+                } else {
+                    car.nitroActive = false;
+                    car.nitroAmount = Math.min(100, car.nitroAmount + 0.5);
+                }
+                
+                // Update position
+                car.x += Math.sin(car.rotation) * car.speed * 0.1;
+                car.z += Math.cos(car.rotation) * car.speed * 0.1;
+                
+                // Track boundaries
+                car.x = Math.max(-350, Math.min(350, car.x));
+                car.z = Math.max(0, Math.min(1000, car.z));
+                
+                // Update distance
+                car.distanceCovered += car.speed * 0.1;
+                
+                // Check lap completion
+                if (car.distanceCovered >= this.gameState.trackLength * car.currentLap) {
+                    car.currentLap++;
+                    if (car.currentLap > 3) {
+                        this.endGame('Player Wins!');
+                    }
+                }
+            }
+            
+            updateAICars() {
+                this.aiCars.forEach(car => {
+                    // Simple AI movement
+                    car.speed = car.maxSpeed * car.aiSpeed;
+                    car.z += car.speed * 0.1;
+                    
+                    // Simple steering
+                    car.x += (Math.random() - 0.5) * 2;
+                    car.x = Math.max(-350, Math.min(350, car.x));
+                    
+                    // Reset if reached end
+                    if (car.z > 1000) {
+                        car.z = 0;
+                        car.currentLap++;
+                        if (car.currentLap > 3) {
+                            this.endGame(`${car.id} Wins!`);
+                        }
+                    }
+                    
+                    car.distanceCovered += car.speed * 0.1;
+                });
+            }
+            
+            checkCollisions() {
+                const car = this.playerCar;
+                
+                // Check nitro pickups
+                this.nitroPickups.forEach(pickup => {
+                    if (!pickup.active) return;
+                    
+                    const distance = Math.sqrt(
+                        Math.pow(car.x - pickup.x, 2) + 
+                        Math.pow(car.z - pickup.z, 2)
+                    );
+                    
+                    if (distance < 30) {
+                        pickup.active = false;
+                        car.nitroAmount = Math.min(100, car.nitroAmount + 25);
+                        // Respawn after 10 seconds
+                        setTimeout(() => {
+                            pickup.active = true;
+                        }, 10000);
+                    }
+                });
+                
+                // Check AI car collisions
+                this.aiCars.forEach(aiCar => {
+                    const distance = Math.sqrt(
+                        Math.pow(car.x - aiCar.x, 2) + 
+                        Math.pow(car.z - aiCar.z, 2)
+                    );
+                    
+                    if (distance < 50) {
+                        // Rear-end collision
+                        car.isRespawning = true;
+                        car.respawnTime = 2;
+                        car.speed = 0;
+                        car.x -= Math.sin(car.rotation) * 50;
+                        car.z -= Math.cos(car.rotation) * 50;
+                        document.getElementById('respawnOverlay').style.display = 'flex';
+                    }
+                });
+            }
+            
+            updateRankings() {
+                const allCars = [this.playerCar, ...this.aiCars];
+                allCars.sort((a, b) => {
+                    if (a.currentLap !== b.currentLap) {
+                        return b.currentLap - a.currentLap;
+                    }
+                    return b.distanceCovered - a.distanceCovered;
+                });
+                
+                allCars.forEach((car, index) => {
+                    car.rank = index + 1;
+                });
+            }
+            
+            render() {
+                const track = document.getElementById('track');
+                
+                // Clear existing cars
+                track.innerHTML = '';
+                
+                // Render player car
+                const playerElement = this.createCarElement(this.playerCar, true);
+                track.appendChild(playerElement);
+                
+                // Render AI cars
+                this.aiCars.forEach(car => {
+                    const carElement = this.createCarElement(car, false);
+                    track.appendChild(carElement);
+                });
+                
+                // Render nitro pickups
+                this.nitroPickups.forEach(pickup => {
+                    if (pickup.active) {
+                        const pickupElement = this.createNitroElement(pickup);
+                        track.appendChild(pickupElement);
+                    }
+                });
+            }
+            
+            createCarElement(car, isPlayer) {
+                const element = document.createElement('div');
+                element.className = `car ${isPlayer ? 'player-car' : ''}`;
+                element.style.left = `${400 + car.x}px`;
+                element.style.top = `${car.z}px`;
+                element.style.transform = `rotate(${car.rotation}rad)`;
+                
+                if (!isPlayer) {
+                    element.style.background = `linear-gradient(45deg, ${car.color}, ${car.color}dd)`;
+                }
+                
+                if (car.nitroActive) {
+                    element.classList.add('nitro-active');
+                }
+                
+                return element;
+            }
+            
+            createNitroElement(pickup) {
+                const element = document.createElement('div');
+                element.className = 'nitro-pickup';
+                element.style.left = `${400 + pickup.x}px`;
+                element.style.top = `${pickup.z}px`;
+                return element;
+            }
+            
+            updateUI() {
+                const car = this.playerCar;
+                
+                document.getElementById('timeRemaining').textContent = this.gameState.timeRemaining;
+                document.getElementById('speed').textContent = Math.round(car.speed);
+                document.getElementById('speedFill').style.width = `${(car.speed / car.maxSpeed) * 100}%`;
+                document.getElementById('nitroAmount').textContent = Math.round(car.nitroAmount);
+                document.getElementById('nitroFill').style.width = `${car.nitroAmount}%`;
+                document.getElementById('distance').textContent = Math.round(car.distanceCovered);
+                document.getElementById('currentLap').textContent = car.currentLap;
+                document.getElementById('rank').textContent = car.rank;
+                
+                // Update leaderboard
+                this.updateLeaderboard();
+            }
+            
+            updateLeaderboard() {
+                const allCars = [this.playerCar, ...this.aiCars];
+                allCars.sort((a, b) => a.rank - b.rank);
+                
+                const playerList = document.getElementById('playerList');
+                playerList.innerHTML = '';
+                
+                allCars.forEach(car => {
+                    const playerDiv = document.createElement('div');
+                    playerDiv.className = `player-info rank-${car.rank}`;
+                    playerDiv.innerHTML = `
+                        <div>${car.rank}. ${car.id === 'player1' ? 'YOU' : car.id.toUpperCase()}</div>
+                        <div>Lap: ${car.currentLap}/3</div>
+                        <div>Distance: ${Math.round(car.distanceCovered)}m</div>
+                    `;
+                    playerList.appendChild(playerDiv);
+                });
+            }
+            
+            showGameStatus() {
+                document.getElementById('gameStatus').style.display = 'block';
+            }
+            
+            endGame(message = 'Game Over') {
+                this.gameState.gameEnded = true;
+                clearInterval(this.gameLoop);
+                clearInterval(this.timerLoop);
+                
+                document.getElementById('statusMessage').textContent = message;
+                document.getElementById('startBtn').textContent = 'Play Again';
+                this.showGameStatus();
+            }
+        }
+        
+        // Initialize game
+        let game;
+        
+        function startGame() {
+            if (game) {
+                // Reset game
+                clearInterval(game.gameLoop);
+                clearInterval(game.timerLoop);
+            }
+            game = new RacingGameDemo();
+            game.startGame();
+        }
+        
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            game = new RacingGameDemo();
+        });
+    </script>
+</body>
+</html>

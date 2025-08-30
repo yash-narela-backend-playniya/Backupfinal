@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Car Racing Game</title>
+  <style>
+    canvas {
+      background-color: #333;
+      display: block;
+      margin: auto;
+    }
+    #hud {
+      color: white;
+      text-align: center;
+      font-family: Arial, sans-serif;
+      margin-top: 10px;
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <div id="hud">Speed: <span id="speed">0</span></div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const TRACK_WIDTH = 100;
+    const TRACK_PATH = [
+      { x: 100, z: 100 },
+      { x: 700, z: 100 },
+      { x: 700, z: 500 },
+      { x: 100, z: 500 }
+    ];
+
+    function createTrackBoundaries() {
+      const inner = [], outer = [];
+      for (let i = 0; i < TRACK_PATH.length; i++) {
+        const current = TRACK_PATH[i];
+        const next = TRACK_PATH[(i + 1) % TRACK_PATH.length];
+        const prev = TRACK_PATH[i === 0 ? TRACK_PATH.length - 1 : i - 1];
+
+        const dx = next.x - prev.x;
+        const dz = next.z - prev.z;
+        const length = Math.sqrt(dx * dx + dz * dz);
+        const perpX = -dz / length;
+        const perpZ = dx / length;
+
+        inner.push({ x: current.x + perpX * (TRACK_WIDTH / 2), z: current.z + perpZ * (TRACK_WIDTH / 2) });
+        outer.push({ x: current.x - perpX * (TRACK_WIDTH / 2), z: current.z - perpZ * (TRACK_WIDTH / 2) });
+      }
+      return { inner, outer };
+    }
+
+    const boundaries = createTrackBoundaries();
+
+    function drawPolygon(points, color) {
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].z);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].z);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function drawCar(car) {
+      ctx.save();
+      ctx.translate(car.x, car.z);
+      ctx.rotate(car.angle);
+      ctx.fillStyle = car.color;
+      ctx.fillRect(-10, -20, 20, 40);
+      ctx.restore();
+    }
+
+    const car = {
+      x: TRACK_PATH[0].x,
+      z: TRACK_PATH[0].z,
+      angle: 0,
+      speed: 0,
+      maxSpeed: 5,
+      acceleration: 0.2,
+      friction: 0.05,
+      turnSpeed: 0.04,
+      color: "red"
+    };
+
+    const keys = {};
+    window.addEventListener("keydown", (e) => keys[e.key] = true);
+    window.addEventListener("keyup", (e) => keys[e.key] = false);
+
+    function updateCar() {
+      // Accelerate
+      if (keys["ArrowUp"]) {
+        car.speed += car.acceleration;
+      }
+
+      // Brake / Reverse
+      if (keys["ArrowDown"]) {
+        car.speed -= car.acceleration;
+      }
+
+      // Cap speed
+      if (car.speed > car.maxSpeed) car.speed = car.maxSpeed;
+      if (car.speed < -car.maxSpeed / 2) car.speed = -car.maxSpeed / 2; // reverse speed
+
+      // Turn only when moving
+      if (car.speed !== 0) {
+        if (keys["ArrowLeft"]) car.angle -= car.turnSpeed;
+        if (keys["ArrowRight"]) car.angle += car.turnSpeed;
+      }
+
+      // Apply friction
+      if (!keys["ArrowUp"] && !keys["ArrowDown"]) {
+        if (car.speed > 0) car.speed -= car.friction;
+        else if (car.speed < 0) car.speed += car.friction;
+        if (Math.abs(car.speed) < 0.01) car.speed = 0;
+      }
+
+      // Move
+      car.x += Math.sin(car.angle) * car.speed;
+      car.z -= Math.cos(car.angle) * car.speed;
+
+      // Update speed display
+      document.getElementById("speed").innerText = car.speed.toFixed(2);
+    }
+
+    function loop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      drawPolygon(boundaries.inner, "green");
+      drawPolygon(boundaries.outer, "white");
+
+      updateCar();
+      drawCar(car);
+
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+  </script>
+</body>
+</html>

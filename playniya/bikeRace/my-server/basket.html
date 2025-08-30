@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcade Basketball</title>
+    <script src="https://unpkg.com/colyseus.js@^0.15.0/dist/colyseus.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #ff6b6b, 0 0 20px #ff6b6b;
+            letter-spacing: 2px;
+        }
+        
+        .game-area {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .court-container {
+            flex: 1;
+            min-width: 700px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .court-header {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #ff6b6b;
+        }
+        
+        .timer, .bet-info {
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 15px;
+            border-radius: 10px;
+        }
+        
+        #gameCanvas {
+            background: linear-gradient(to bottom, #1a936f, #114b5f);
+            border-radius: 10px;
+            width: 100%;
+            height: 500px;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .control-btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px;
+            background: linear-gradient(to bottom, #ff6b6b, #d63031);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        .control-btn:active {
+            transform: translateY(1px);
+        }
+        
+        .control-btn:disabled {
+            background: #7f8c8d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .info-panel {
+            flex: 0 0 300px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .panel-section {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        h2 {
+            color: #ff6b6b;
+            margin-bottom: 15px;
+            font-size: 1.8rem;
+            text-align: center;
+        }
+        
+        .players-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .player-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            font-size: 1.1rem;
+        }
+        
+        .player-name {
+            font-weight: bold;
+        }
+        
+        .player-score {
+            color: #feca57;
+            font-weight: bold;
+        }
+        
+        .status-message {
+            text-align: center;
+            font-size: 1.3rem;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+        
+        .power-control {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .slider-label {
+            width: 80px;
+            font-weight: bold;
+        }
+        
+        input[type="range"] {
+            flex: 1;
+            height: 10px;
+            border-radius: 5px;
+            background: #7f8c8d;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ff6b6b;
+            cursor: pointer;
+        }
+        
+        .wallet-info {
+            font-size: 1.2rem;
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+        }
+        
+        .wallet-label {
+            color: #a29bfe;
+        }
+        
+        .wallet-value {
+            font-weight: bold;
+            color: #feca57;
+        }
+        
+        .winner-banner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 100;
+            box-shadow: 0 0 50px gold;
+            border: 3px solid gold;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 30px gold; }
+            50% { box-shadow: 0 0 60px gold; }
+            100% { box-shadow: 0 0 30px gold; }
+        }
+        
+        .winner-title {
+            font-size: 2.5rem;
+            color: gold;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+        }
+        
+        .winner-name {
+            font-size: 3rem;
+            color: #ff6b6b;
+            margin: 20px 0;
+            text-shadow: 0 0 15px #ff6b6b;
+        }
+        
+        .winner-score {
+            font-size: 2rem;
+            color: #feca57;
+        }
+        
+        .winner-prize {
+            font-size: 1.5rem;
+            color: #00cec9;
+            margin-top: 20px;
+        }
+        
+        .close-btn {
+            margin-top: 20px;
+            padding: 10px 30px;
+            background: linear-gradient(to bottom, #ff6b6b, #d63031);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .instructions {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        
+        .instructions h3 {
+            color: #a29bfe;
+            margin-bottom: 10px;
+        }
+        
+        .instructions ul {
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        @media (max-width: 1100px) {
+            .game-area {
+                flex-direction: column;
+            }
+            
+            .court-container {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏀 Arcade Basketball 🏀</h1>
+            <p>Shoot hoops, beat your opponents, and win big!</p>
+        </header>
+        
+        <div class="game-area">
+            <div class="court-container">
+                <div class="court-header">
+                    <div class="timer">⏱️ Time: <span id="time">180s</span></div>
+                    <div class="bet-info">💰 Bet: $<span id="betAmount">10</span> | Win: $<span id="winAmount">50</span></div>
+                </div>
+                
+                <canvas id="gameCanvas" width="900" height="500"></canvas>
+                
+                <div class="controls">
+                    <button id="moveLeft" class="control-btn">← Move Left</button>
+                    <button id="shootBtn" class="control-btn">🎯 Shoot</button>
+                    <button id="moveRight" class="control-btn">→ Move Right</button>
+                    <button id="autoShoot" class="control-btn">🤖 Auto-Align & Shoot</button>
+                    <button id="rematchBtn" class="control-btn">🔄 Rematch</button>
+                </div>
+                
+                <div class="power-control">
+                    <div class="slider-container">
+                        <div class="slider-label">Angle:</div>
+                        <input type="range" id="angleSlider" min="30" max="70" value="50">
+                        <span id="angleValue">50°</span>
+                    </div>
+                    <div class="slider-container">
+                        <div class="slider-label">Power:</div>
+                        <input type="range" id="powerSlider" min="1" max="10" value="5">
+                        <span id="powerValue">5</span>
+                    </div>
+                </div>
+                
+                <div class="instructions">
+                    <h3>How to Play:</h3>
+                    <ul>
+                        <li>Move left/right to position your player</li>
+                        <li>Adjust the angle and power of your shot</li>
+                        <li>Press SHOOT to launch the ball</li>
+                        <li>Aim for the moving basket to score points</li>
+                        <li>Highest score when time runs out wins!</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="info-panel">
+                <div class="panel-section">
+                    <h2>Players</h2>
+                    <div class="players-list" id="playersList">
+                        <div class="player-item">
+                            <span class="player-name">You (Player1)</span>
+                            <span class="player-score">0</span>
+                        </div>
+                        <div class="player-item">
+                            <span class="player-name">Player2</span>
+                            <span class="player-score">0</span>
+                        </div>
+                        <div class="player-item">
+                            <span class="player-name">Player3</span>
+                            <span class="player-score">0</span>
+                        </div>
+                        <div class="player-item">
+                            <span class="player-name">Player4</span>
+                            <span class="player-score">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="panel-section">
+                    <h2>Wallet</h2>
+                    <div class="wallet-info">
+                        <span class="wallet-label">Balance:</span>
+                        <span class="wallet-value">$<span id="balance">100.00</span></span>
+                    </div>
+                    <div class="wallet-info">
+                        <span class="wallet-label">Current Bet:</span>
+                        <span class="wallet-value">$<span id="currentBet">10.00</span></span>
+                    </div>
+                    <div class="wallet-info">
+                        <span class="wallet-label">Potential Win:</span>
+                        <span class="wallet-value">$<span id="potentialWin">50.00</span></span>
+                    </div>
+                </div>
+                
+                <div class="panel-section">
+                    <h2>Game Status</h2>
+                    <div class="status-message" id="statusMessage">
+                        Waiting for players...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="winnerBanner" class="winner-banner hidden">
+        <div class="winner-title">🎉 GAME WINNER! 🎉</div>
+        <div class="winner-name" id="winnerName">Player1</div>
+        <div class="winner-score">Score: <span id="winnerScore">42</span></div>
+        <div class="winner-prize">🏆 Prize: $<span id="prizeAmount">50</span> 🏆</div>
+        <button class="close-btn" onclick="document.getElementById('winnerBanner').classList.add('hidden')">Close</button>
+    </div>
+
+    <script>
+        // Game configuration
+        const config = {
+            serverUrl: "ws://localhost:2567",
+            roomName: "arcade_basketball",
+            playerName: "Player" + Math.floor(Math.random() * 1000),
+            uniqueId: "user_" + Date.now(),
+            betAmount: 10,
+            useBonus: true,
+            walletBalance: 100.00
+        };
+        
+        // Game state
+        let room = null;
+        let playerId = null;
+        let gameState = {
+            phase: "waiting",
+            players: {},
+            ball: { x: 0, y: 0, visible: false },
+            basketX: 400,
+            basketDirection: 1,
+            remainingTime: 180
+        };
+        
+        // Canvas setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Connect to Colyseus server
+        async function connectToGame() {
+            try {
+                const client = new Colyseus.Client(config.serverUrl);
+                
+                room = await client.joinOrCreate(config.roomName, {
+                    name: config.playerName,
+                    uniqueId: config.uniqueId,
+                    userId: config.uniqueId,
+                    useBonus: config.useBonus,
+                    matchOptionId: "match1"
+                });
+                
+                playerId = room.sessionId;
+                document.getElementById('statusMessage').textContent = "Connected to game! Waiting to start...";
+                
+                // Set up room listeners
+                room.onStateChange((state) => {
+                    gameState = state;
+                    updateGameUI();
+                    renderGame();
+                });
+                
+                room.onMessage("scoreUpdate", (message) => {
+                    // Update player scores
+                    updatePlayersList();
+                });
+                
+                room.onMessage("shotTaken", (message) => {
+                    // Visual effect for shot
+                    animateShot(message.playerId);
+                });
+                
+                room.onMessage("shotReset", () => {
+                    // Reset shot visuals
+                });
+                
+                room.onMessage("playerMoved", (message) => {
+                    // Update player position
+                    renderGame();
+                });
+                
+                room.onMessage("gameEnd", (message) => {
+                    showWinner(message.winnerId, message.scores);
+                });
+                
+                // Set up UI listeners
+                setupControls();
+                
+            } catch (e) {
+                console.error("Connection error:", e);
+                document.getElementById('statusMessage').textContent = "Failed to connect to game server.";
+            }
+        }
+        
+        // Update UI based on game state
+        function updateGameUI() {
+            // Update timer
+            document.getElementById('time').textContent = `${gameState.remainingTime}s`;
+            
+            // Update status message
+            let statusText = "";
+            switch (gameState.phase) {
+                case "waiting":
+                    statusText = `Waiting for players... (${Object.keys(gameState.players).length}/${gameState.minPlayers})`;
+                    break;
+                case "playing":
+                    statusText = "Game in progress!";
+                    break;
+                case "ended":
+                    statusText = "Game ended";
+                    break;
+            }
+            document.getElementById('statusMessage').textContent = statusText;
+            
+            // Update players list
+            updatePlayersList();
+        }
+        
+        // Update players list UI
+        function updatePlayersList() {
+            const playersList = document.getElementById('playersList');
+            playersList.innerHTML = '';
+            
+            Object.values(gameState.players).forEach(player => {
+                const playerItem = document.createElement('div');
+                playerItem.className = 'player-item';
+                playerItem.innerHTML = `
+                    <span class="player-name">${player.name} ${player.sessionId === playerId ? '(You)' : ''}</span>
+                    <span class="player-score">${player.score}</span>
+                `;
+                playersList.appendChild(playerItem);
+            });
+        }
+        
+        // Render game on canvas
+        function renderGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw court
+            drawCourt();
+            
+            // Draw players
+            Object.values(gameState.players).forEach(player => {
+                drawPlayer(player);
+            });
+            
+            // Draw basket
+            drawBasket();
+            
+            // Draw ball if visible
+            if (gameState.ball.visible) {
+                drawBall();
+            }
+        }
+        
+        // Draw basketball court
+        function drawCourt() {
+            // Court surface
+            ctx.fillStyle = '#1a936f';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Court markings
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height - 40);
+            ctx.lineTo(canvas.width, canvas.height - 40);
+            ctx.stroke();
+            
+            // Center circle
+            ctx.beginPath();
+            ctx.arc(canvas.width/2, canvas.height - 100, 40, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        // Draw player
+        function drawPlayer(player) {
+            const isCurrentPlayer = player.sessionId === playerId;
+            
+            // Player body
+            ctx.fillStyle = isCurrentPlayer ? '#3498db' : '#e74c3c';
+            ctx.beginPath();
+            ctx.arc(player.xPosition, canvas.height - 80, 20, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Player shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(player.xPosition, canvas.height - 55, 25, 10, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Player name
+            ctx.fillStyle = 'white';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(player.name, player.xPosition, canvas.height - 100);
+        }
+        
+        // Draw basket
+        function drawBasket() {
+            const basketX = gameState.basketX;
+            const basketY = 150;
+            
+            // Backboard
+            ctx.fillStyle = 'white';
+            ctx.fillRect(basketX - 5, basketY - 50, 10, 60);
+            
+            // Rim
+            ctx.strokeStyle = '#f1c40f';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(basketX, basketY, 25, 0, Math.PI);
+            ctx.stroke();
+            
+            // Net
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 8; i++) {
+                const angle = Math.PI * i / 8;
+                ctx.beginPath();
+                ctx.moveTo(basketX + Math.cos(angle) * 25, basketY + Math.sin(angle) * 5);
+                ctx.lineTo(basketX + Math.cos(angle) * 15, basketY + 40 + Math.sin(angle) * 5);
+                ctx.stroke();
+            }
+        }
+        
+        // Draw ball
+        function drawBall() {
+            // Ball body
+            ctx.fillStyle = '#e67e22';
+            ctx.beginPath();
+            ctx.arc(gameState.ball.x, gameState.ball.y, 12, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Ball lines
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(gameState.ball.x, gameState.ball.y, 12, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(gameState.ball.x - 10, gameState.ball.y);
+            ctx.lineTo(gameState.ball.x + 10, gameState.ball.y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(gameState.ball.x, gameState.ball.y - 10);
+            ctx.lineTo(gameState.ball.x, gameState.ball.y + 10);
+            ctx.stroke();
+            
+            // Ball shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.beginPath();
+            ctx.ellipse(gameState.ball.x, canvas.height - 30, 15, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Animate shot effect
+        function animateShot(playerId) {
+            // Flash effect for shot
+            const player = gameState.players[playerId];
+            if (player) {
+                const trailCount = 20;
+                
+                function drawTrail(i) {
+                    if (i >= trailCount) return;
+                    
+                    ctx.fillStyle = `rgba(255, 255, 100, ${1 - i/trailCount})`;
+                    ctx.beginPath();
+                    ctx.arc(
+                        player.xPosition + (gameState.basketX - player.xPosition) * i/trailCount,
+                        (canvas.height - 80) - (100 * i/trailCount),
+                        5 + 10 * (1 - i/trailCount),
+                        0, Math.PI * 2
+                    );
+                    ctx.fill();
+                    
+                    setTimeout(() => {
+                        renderGame();
+                        drawTrail(i + 1);
+                    }, 50);
+                }
+                
+                drawTrail(0);
+            }
+        }
+        
+        // Show winner
+        function showWinner(winnerId, scores) {
+            const winner = gameState.players[winnerId];
+            if (winner) {
+                document.getElementById('winnerName').textContent = winner.name;
+                document.getElementById('winnerScore').textContent = winner.score;
+                document.getElementById('prizeAmount').textContent = gameState.winAmount;
+                document.getElementById('winnerBanner').classList.remove('hidden');
+                
+                // Update wallet
+                config.walletBalance += gameState.winAmount;
+                document.getElementById('balance').textContent = config.walletBalance.toFixed(2);
+            }
+        }
+        
+        // Set up game controls
+        function setupControls() {
+            // Shoot button
+            document.getElementById('shootBtn').addEventListener('click', () => {
+                if (!room || gameState.phase !== "playing") return;
+                
+                const angle = parseInt(document.getElementById('angleSlider').value);
+                const power = parseInt(document.getElementById('powerSlider').value);
+                
+                room.send("shoot", { angle, power });
+            });
+            
+            // Move buttons
+            document.getElementById('moveLeft').addEventListener('mousedown', () => movePlayer('left', true));
+            document.getElementById('moveLeft').addEventListener('mouseup', () => movePlayer('left', false));
+            document.getElementById('moveLeft').addEventListener('mouseleave', () => movePlayer('left', false));
+            document.getElementById('moveRight').addEventListener('mousedown', () => movePlayer('right', true));
+            document.getElementById('moveRight').addEventListener('mouseup', () => movePlayer('right', false));
+            document.getElementById('moveRight').addEventListener('mouseleave', () => movePlayer('right', false));
+            
+            // Auto shoot
+            document.getElementById('autoShoot').addEventListener('click', () => {
+                if (!room || gameState.phase !== "playing") return;
+                room.send("autoShoot");
+            });
+            
+            // Rematch
+            document.getElementById('rematchBtn').addEventListener('click', () => {
+                if (!room || gameState.phase !== "ended") return;
+                room.send("rematch_request");
+            });
+            
+            // Sliders
+            document.getElementById('angleSlider').addEventListener('input', (e) => {
+                document.getElementById('angleValue').textContent = e.target.value + "°";
+            });
+            
+            document.getElementById('powerSlider').addEventListener('input', (e) => {
+                document.getElementById('powerValue').textContent = e.target.value;
+            });
+        }
+        
+        // Move player
+        function movePlayer(direction, moving) {
+            if (!room || gameState.phase !== "playing" || !playerId) return;
+            
+            const player = gameState.players[playerId];
+            if (!player) return;
+            
+            if (moving) {
+                const moveInterval = setInterval(() => {
+                    if (!room || !playerId || !gameState.players[playerId]) {
+                        clearInterval(moveInterval);
+                        return;
+                    }
+                    
+                    const currentX = gameState.players[playerId].xPosition;
+                    const moveAmount = direction === 'left' ? -10 : 10;
+                    const newX = Math.max(50, Math.min(canvas.width - 50, currentX + moveAmount));
+                    
+                    room.send("move", { x: newX });
+                }, 50);
+                
+                // Store interval ID to stop later
+                if (direction === 'left') {
+                    window.leftMoveInterval = moveInterval;
+                } else {
+                    window.rightMoveInterval = moveInterval;
+                }
+            } else {
+                // Stop movement
+                if (direction === 'left' && window.leftMoveInterval) {
+                    clearInterval(window.leftMoveInterval);
+                } else if (direction === 'right' && window.rightMoveInterval) {
+                    clearInterval(window.rightMoveInterval);
+                }
+            }
+        }
+        
+        // Initialize game
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set wallet info
+            document.getElementById('balance').textContent = config.walletBalance.toFixed(2);
+            document.getElementById('currentBet').textContent = config.betAmount.toFixed(2);
+            document.getElementById('potentialWin').textContent = (config.betAmount * 5).toFixed(2);
+            document.getElementById('betAmount').textContent = config.betAmount;
+            document.getElementById('winAmount').textContent = config.betAmount * 5;
+            
+            // Connect to game
+            connectToGame();
+            
+            // Start rendering loop
+            setInterval(() => {
+                renderGame();
+            }, 1000/60);
+        });
+    </script>
+</body>
+</html>

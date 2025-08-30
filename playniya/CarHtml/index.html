@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Multiplayer Car Race</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="1000"></canvas>
+
+  <div id="hud">
+    <div>Speed: <span id="speed">0</span></div>
+    <div>Score: <span id="score">0</span></div>
+    <div>Countdown: <span id="countdown">Waiting...</span></div>
+  </div>
+
+<!-- ✅ Load Colyseus client FIRST -->
+<script src="https://unpkg.com/colyseus.js@latest/dist/colyseus.min.js"></script>
+
+<!-- ✅ Then your game logic -->
+<script src="main.js"></script>
+
+</body>
+</html>

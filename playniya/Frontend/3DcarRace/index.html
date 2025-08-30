@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>3D Checkpoints Visualization</title>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      canvas { display: block; }
+    </style>
+  </head>
+  <body>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+    <script>
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 5000);
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      const checkpointPositions = [
+        { x: 100, y: 0, z: 300 },
+        { x: 500, y: 0, z: 100 },
+        { x: 1000, y: 0, z: 50 },
+        { x: 1500, y: 50, z: 200 },
+        { x: 1800, y: 100, z: 500 },
+        { x: 1700, y: 150, z: 900 },
+        { x: 1400, y: 100, z: 1200 },
+        { x: 1000, y: 50, z: 1400 },
+        { x: 600, y: 0, z: 1300 },
+        { x: 300, y: 0, z: 1100 },
+        { x: 100, y: 0, z: 800 },
+        { x: 50, y: 0, z: 400 }
+      ];
+
+      const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+      checkpointPositions.forEach(pos => {
+        const sphere = new THREE.Mesh(new THREE.SphereGeometry(20, 16, 16), material);
+        sphere.position.set(pos.x, pos.y, pos.z);
+        scene.add(sphere);
+      });
+
+      // Connect checkpoints with a line
+      const points = checkpointPositions.map(p => new THREE.Vector3(p.x, p.y, p.z));
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 0x00ff00 }));
+      scene.add(line);
+
+      camera.position.set(0, 400, 2000);
+      camera.lookAt(new THREE.Vector3(900, 0, 700));
+
+      function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+      }
+      animate();
+    </script>
+  </body>
+</html>

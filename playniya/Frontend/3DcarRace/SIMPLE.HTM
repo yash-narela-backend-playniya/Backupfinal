@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simple Car Physics</title>
+  <style>
+    canvas {
+      background: #ccc; /* track */
+      display: block;
+      margin: 0 auto;
+      border: 2px solid black;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game" width="800" height="400"></canvas>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const car = {
+      x: 100,
+      z: 200,
+      angle: 0,
+      vx: 0,
+      vz: 0,
+      throttle: 0,
+      brake: 0,
+      steering: 0,
+      nitro: 100,
+      nitroActive: false
+    };
+
+    const MAX_SPEED = 200;
+    const ACCEL = 500;
+    const BRAKE_DECEL = 400;
+    const FRICTION = 0.98;
+    const STEER_SPEED = 3;
+    const MAX_STEER = 1;
+    const NITRO_BOOST = 300;
+    const NITRO_CONSUMPTION = 40;
+
+    const keys = {};
+    document.addEventListener("keydown", e => keys[e.key] = true);
+    document.addEventListener("keyup", e => keys[e.key] = false);
+
+    function update(dt) {
+      // --- Input handling
+      car.throttle = keys["ArrowUp"] ? 1 : 0;
+      car.brake = keys["ArrowDown"] ? 1 : 0;
+      car.steering = keys["ArrowLeft"] ? -1 : keys["ArrowRight"] ? 1 : 0;
+      car.nitroActive = keys["Shift"] && car.nitro > 0;
+
+      // --- Steering
+      car.steering = Math.max(-1, Math.min(1, car.steering));
+      const steerAngle = car.steering * MAX_STEER;
+      const speed = Math.hypot(car.vx, car.vz);
+      if (car.throttle || speed > 1) {
+        car.angle += steerAngle * dt * STEER_SPEED;
+      }
+
+      // --- Acceleration
+      const forward = {
+        x: Math.cos(car.angle),
+        z: Math.sin(car.angle),
+      };
+
+      let accel = 0;
+      if (car.throttle) accel += ACCEL;
+      if (car.nitroActive) {
+        accel += NITRO_BOOST;
+        car.nitro -= NITRO_CONSUMPTION * dt;
+        if (car.nitro < 0) car.nitro = 0;
+      }
+      if (car.brake) accel -= BRAKE_DECEL;
+
+      car.vx += forward.x * accel * dt;
+      car.vz += forward.z * accel * dt;
+
+      // --- Friction
+      car.vx *= FRICTION;
+      car.vz *= FRICTION;
+
+      // --- Limit speed
+      const spd = Math.hypot(car.vx, car.vz);
+      if (spd > MAX_SPEED) {
+        car.vx = (car.vx / spd) * MAX_SPEED;
+        car.vz = (car.vz / spd) * MAX_SPEED;
+      }
+
+      // --- Update position
+      car.x += car.vx * dt;
+      car.z += car.vz * dt;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw track
+      ctx.fillStyle = "#888";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw car
+      ctx.save();
+      ctx.translate(car.x, car.z);
+      ctx.rotate(car.angle);
+      ctx.fillStyle = "red";
+      ctx.fillRect(-15, -10, 30, 20);
+      ctx.restore();
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = (now - last) / 1000;
+      last = now;
+
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    loop(last);
+  </script>
+</body>
+</html>

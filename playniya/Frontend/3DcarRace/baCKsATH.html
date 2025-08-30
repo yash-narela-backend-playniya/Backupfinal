@@ -1,0 +1,78 @@
+<script type="module">
+  import { Client } from "https://esm.sh/colyseus.js";
+
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas.getContext("2d");
+
+  const TRACK_INNER = { x: 100, y: 100, w: 600, h: 400 };
+  const TRACK_OUTER = { x: 50, y: 50, w: 700, h: 500 };
+
+  const client = new Client("ws://localhost:2567");
+  const room = await client.joinOrCreate("race", {
+    uniqueId: "user-" + Math.random(),
+    matchOptionId: "demo1",
+    name: "Player1"
+  });
+
+  let mySessionId = room.sessionId;
+  let players = {}; // sessionId -> {x, z, angle}
+
+  room.state.players.onAdd = (player, sessionId) => {
+    players[sessionId] = player;
+    player.onChange = () => draw();
+  };
+
+  room.state.players.onRemove = (player, sessionId) => {
+    delete players[sessionId];
+  };
+
+  const input = {
+    left: false,
+    right: false,
+    accelerate: false,
+  };
+
+  // Send input to server
+  setInterval(() => {
+    room.send("input", input);
+  }, 1000 / 30); // 30 fps
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "ArrowLeft") input.left = true;
+    if (e.key === "ArrowRight") input.right = true;
+    if (e.key === "ArrowUp") input.accelerate = true;
+  });
+
+  document.addEventListener("keyup", e => {
+    if (e.key === "ArrowLeft") input.left = false;
+    if (e.key === "ArrowRight") input.right = false;
+    if (e.key === "ArrowUp") input.accelerate = false;
+  });
+
+  function drawTrack() {
+    ctx.fillStyle = "white";
+    ctx.fillRect(TRACK_OUTER.x, TRACK_OUTER.y, TRACK_OUTER.w, TRACK_OUTER.h);
+    ctx.fillStyle = "green";
+    ctx.fillRect(TRACK_INNER.x, TRACK_INNER.y, TRACK_INNER.w, TRACK_INNER.h);
+  }
+
+  function drawCars() {
+    for (let id in players) {
+      const player = players[id];
+      ctx.save();
+      ctx.translate(player.x, player.z);
+      ctx.rotate(player.angle);
+      ctx.fillStyle = id === mySessionId ? "blue" : "red";
+      ctx.fillRect(-10, -5, 20, 10);
+      ctx.restore();
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawTrack();
+    drawCars();
+  }
+
+  setInterval(draw, 1000 / 60);
+</script>
