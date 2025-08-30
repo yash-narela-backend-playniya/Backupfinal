@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Tic Tac Toe</title>
+  </head>
+  <body>
+    <h1>Welcome to Tic Tac Toe</h1>
+
+    <script src="https://unpkg.com/colyseus.js@^0.15.15/dist/colyseus.js"></script>
+    <script>
+      const client = new Colyseus.Client("ws://localhost:2567");
+
+      // Try to join or create the room
+      client
+        .joinOrCreate("tic-tac-toe")
+        .then((room) => {
+          console.log("Joined successfully", room);
+          // You can send or receive messages with room.send() and room.onMessage()
+        })
+        .catch((err) => {
+          console.error("Join error", err);
+        });
+    </script>
+  </body>
+</html>
